@@ -2,11 +2,11 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import User as AiogramUser
 
-from app.bot.handlers.utils import telegram_user_dto
-from app.bot.keyboards.reply import main_menu_keyboard
-from app.db.database import async_session_factory
-from app.services.assessment_service import AssessmentService
-from app.services.neural_api import get_neural_api_service
+from bot.app.bot.handlers.utils import telegram_user_dto
+from bot.app.bot.keyboards.reply import main_menu_keyboard
+from bot.app.db.database import async_session_factory
+from bot.app.services.assessment_service import AssessmentService
+from bot.app.services.neural_api import get_neural_api_service
 
 
 WELCOME_TEXT = (

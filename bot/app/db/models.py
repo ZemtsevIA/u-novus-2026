@@ -5,7 +5,7 @@ from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Integer,
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.database import Base
+from bot.app.db.database import Base
 
 
 class AssessmentStatus(str, enum.Enum):

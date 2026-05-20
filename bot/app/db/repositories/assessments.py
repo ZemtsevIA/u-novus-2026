@@ -2,8 +2,8 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.models import Assessment, AssessmentQuestion, AssessmentStatus
-from app.schemas.neural import QuestionDTO
+from bot.app.db.models import Assessment, AssessmentQuestion, AssessmentStatus
+from bot.app.schemas.neural import QuestionDTO
 
 
 FINAL_STATUSES = {

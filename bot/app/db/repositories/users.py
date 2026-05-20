@@ -1,8 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import User
-from app.schemas.user import TelegramUserDTO
+from bot.app.db.models import User
+from bot.app.schemas.user import TelegramUserDTO
 
 
 class UserRepository:

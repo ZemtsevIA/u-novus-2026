@@ -1,10 +1,10 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 from aiogram.exceptions import TelegramBadRequest
-from app.bot.handlers.cleanup import cleanup_bot_messages
-from app.bot.handlers.persistent_menu import ensure_persistent_menu
-from app.bot.handlers.utils import format_question, format_result, format_roadmap, telegram_user_dto, format_courses_page
-from app.bot.keyboards.inline import (
+from bot.app.bot.handlers.cleanup import cleanup_bot_messages
+from bot.app.bot.handlers.persistent_menu import ensure_persistent_menu
+from bot.app.bot.handlers.utils import format_question, format_result, format_roadmap, telegram_user_dto, format_courses_page
+from bot.app.bot.keyboards.inline import (
     AnswerCallback,
     ConfirmAssessmentCallback,
     CoursesPageCallback,
@@ -18,11 +18,11 @@ from app.bot.keyboards.inline import (
     roadmap_confirmation_keyboard,
     roadmap_rejection_reasons_keyboard,
 )
-from app.db.database import async_session_factory
-from app.db.models import AssessmentStatus
-from app.services.assessment_service import AssessmentService
-from app.services.course_service import CourseService
-from app.services.neural_api import get_neural_api_service
+from bot.app.db.database import async_session_factory
+from bot.app.db.models import AssessmentStatus
+from bot.app.services.assessment_service import AssessmentService
+from bot.app.services.course_service import CourseService
+from bot.app.services.neural_api import get_neural_api_service
 
 router = Router()
 MENU_COMMANDS = {

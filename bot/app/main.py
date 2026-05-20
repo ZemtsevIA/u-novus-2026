@@ -4,11 +4,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.routes import api_router
-from app.bot.handlers import register_handlers
-from app.bot.loader import bot, dp
-from app.core.config import settings
-from app.core.logging import setup_logging
+from bot.app.api.routes import api_router
+from bot.app.bot.handlers import register_handlers
+from bot.app.bot.loader import bot, dp
+from bot.app.core.config import settings
+from bot.app.core.logging import setup_logging
 
 handlers_registered = False
 logger = logging.getLogger(__name__)

@@ -2,10 +2,10 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.core.config import settings
-from app.db.models import AssessmentQuestion
-from app.schemas.assessment import LEVEL_TITLES
-from app.schemas.course import CourseDTO
+from bot.app.core.config import settings
+from bot.app.db.models import AssessmentQuestion
+from bot.app.schemas.assessment import LEVEL_TITLES
+from bot.app.schemas.course import CourseDTO
 
 
 class AnswerCallback(CallbackData, prefix="answer"):

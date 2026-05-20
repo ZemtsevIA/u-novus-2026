@@ -2,8 +2,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.models import Roadmap, RoadmapStatus, UserCourse
-from app.schemas.roadmap import RoadmapDTO
+from bot.app.db.models import Roadmap, RoadmapStatus, UserCourse
+from bot.app.schemas.roadmap import RoadmapDTO
 
 
 class RoadmapRepository:

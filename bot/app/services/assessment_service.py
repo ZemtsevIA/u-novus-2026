@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.models import Assessment, AssessmentQuestion, AssessmentStatus, Roadmap, User
-from app.db.repositories.assessments import AssessmentRepository
-from app.db.repositories.roadmaps import RoadmapRepository
-from app.db.repositories.users import UserRepository
-from app.schemas.assessment import LEVEL_TITLES
-from app.schemas.neural import AnswerDTO, SkillAssessmentDTO
-from app.schemas.user import TelegramUserDTO
-from app.services.neural_api import NeuralApiService
+from bot.app.db.models import Assessment, AssessmentQuestion, AssessmentStatus, Roadmap, User
+from bot.app.db.repositories.assessments import AssessmentRepository
+from bot.app.db.repositories.roadmaps import RoadmapRepository
+from bot.app.db.repositories.users import UserRepository
+from bot.app.schemas.assessment import LEVEL_TITLES
+from bot.app.schemas.neural import AnswerDTO, SkillAssessmentDTO
+from bot.app.schemas.user import TelegramUserDTO
+from bot.app.services.neural_api import NeuralApiService
 
 
 @dataclass(slots=True)

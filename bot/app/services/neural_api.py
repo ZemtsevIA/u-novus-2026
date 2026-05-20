@@ -6,9 +6,9 @@ from pathlib import Path
 import httpx
 from pydantic import ValidationError
 
-from app.core.config import Settings, settings
-from app.schemas.neural import AnswerDTO, QuestionDTO, SkillAssessmentDTO
-from app.schemas.roadmap import NeuralRoadmapResponseDTO, RoadmapCourseDTO, RoadmapDTO, RoadmapItemDTO
+from bot.app.core.config import Settings, settings
+from bot.app.schemas.neural import AnswerDTO, QuestionDTO, SkillAssessmentDTO
+from bot.app.schemas.roadmap import NeuralRoadmapResponseDTO, RoadmapCourseDTO, RoadmapDTO, RoadmapItemDTO
 
 
 ROADMAP_REJECTION_REASON_TITLES = {

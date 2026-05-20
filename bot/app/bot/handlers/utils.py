@@ -1,7 +1,7 @@
 from aiogram.types import User as AiogramUser
-from app.schemas.course import CourseDTO
-from app.schemas.user import TelegramUserDTO
-from app.db.models import Roadmap
+from bot.app.schemas.course import CourseDTO
+from bot.app.schemas.user import TelegramUserDTO
+from bot.app.db.models import Roadmap
 
 COURSES_PAGE_SIZE = 5
 

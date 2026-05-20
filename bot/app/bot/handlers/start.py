@@ -3,12 +3,12 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 
-from app.bot.handlers.cleanup import cleanup_bot_messages
-from app.bot.handlers.persistent_menu import ensure_persistent_menu
-from app.bot.handlers.utils import telegram_user_dto
-from app.db.database import async_session_factory
-from app.services.assessment_service import AssessmentService
-from app.services.neural_api import get_neural_api_service
+from bot.app.bot.handlers.cleanup import cleanup_bot_messages
+from bot.app.bot.handlers.persistent_menu import ensure_persistent_menu
+from bot.app.bot.handlers.utils import telegram_user_dto
+from bot.app.db.database import async_session_factory
+from bot.app.services.assessment_service import AssessmentService
+from bot.app.services.neural_api import get_neural_api_service
 
 router = Router()
 

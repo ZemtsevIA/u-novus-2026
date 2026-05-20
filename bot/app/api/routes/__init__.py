@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
-from app.api.routes import health, miniapp, telegram
+from bot.app.api.routes import telegram
+from bot.app.api.routes import health, miniapp
 
 api_router = APIRouter()
 api_router.include_router(health.router)

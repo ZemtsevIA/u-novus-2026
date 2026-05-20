@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
-from app.db.database import async_session_factory
-from app.db.repositories.roadmaps import RoadmapRepository
+from bot.app.db.database import async_session_factory
+from bot.app.db.repositories.roadmaps import RoadmapRepository
 
 router = APIRouter(prefix="/miniapp", tags=["miniapp"])
 
@@ -34,10 +34,10 @@ async def miniapp_roadmap(roadmap_id: int) -> dict:
 from fastapi import APIRouter, Header, HTTPException
 from sqlalchemy import select
 
-from app.core.config import settings
-from app.db.database import async_session_factory
-from app.db.models import Assessment, Roadmap, User
-from app.services.telegram_webapp_auth import validate_telegram_init_data
+from bot.app.core.config import settings
+from bot.app.db.database import async_session_factory
+from bot.app.db.models import Assessment, Roadmap, User
+from bot.app.services.telegram_webapp_auth import validate_telegram_init_data
 
 router = APIRouter(prefix="/miniapp", tags=["miniapp"])
 

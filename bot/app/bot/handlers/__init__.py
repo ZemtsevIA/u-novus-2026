@@ -1,6 +1,7 @@
 from aiogram import Dispatcher
 
-from app.bot.handlers import assessment, menu, start
+from bot.app.bot.handlers import start
+from bot.app.bot.handlers import assessment, menu
 
 
 def register_handlers(dp: Dispatcher) -> None:
