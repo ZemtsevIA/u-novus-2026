@@ -1,7 +1,7 @@
 <template>
   <header class="header">
     <div class="logo">
-      <img class="logo-img" src="/src/assets/logo.png" alt="logo">
+      <img @click="navigateTo('home')" class="logo-img" src="/src/assets/logo.png" alt="logo">
     </div>
 
     <div class="menu-container">
@@ -45,6 +45,9 @@ const navigateTo = (page) => {
       break
     case 'leaderboard':
       router.push('/Liderboarding')
+      break
+    case 'home':
+      router.push('/')
       break
   }
   isMenuOpen.value = false // закрываем меню после перехода
