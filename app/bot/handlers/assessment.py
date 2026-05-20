@@ -1,8 +1,8 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 from aiogram.exceptions import TelegramBadRequest
-from app.bot.keyboards.reply import main_menu_keyboard
 from app.bot.handlers.cleanup import cleanup_bot_messages
+from app.bot.handlers.persistent_menu import ensure_persistent_menu
 from app.bot.handlers.utils import format_question, format_result, format_roadmap, telegram_user_dto, format_courses_page
 from app.bot.keyboards.inline import (
     AnswerCallback,
@@ -46,6 +46,27 @@ async def remember_roadmap_message(roadmap_id: int, message: Message) -> None:
         await service.remember_bot_message_for_roadmap(roadmap_id, message.message_id)
 
 
+async def safe_callback_answer(callback: CallbackQuery, text: str | None = None, show_alert: bool = False) -> None:
+    try:
+        await callback.answer(text=text, show_alert=show_alert)
+    except TelegramBadRequest:
+        pass
+
+
+async def show_loading(message: Message, text: str) -> Message:
+    await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
+    return await message.answer(text)
+
+
+async def safe_delete_message(message: Message | None) -> None:
+    if message is None:
+        return
+    try:
+        await message.delete()
+    except TelegramBadRequest:
+        pass
+
+
 @router.message(F.text & ~F.text.in_(MENU_COMMANDS))
 async def topic_or_unexpected_text(message: Message) -> None:
     if message.from_user is None or message.text is None:
@@ -66,7 +87,8 @@ async def topic_or_unexpected_text(message: Message) -> None:
             try:
                 cleanup_ids = await service.pop_bot_messages(assessment.id)
                 topic_result = await service.handle_topic(telegram_user_dto(message.from_user), message.text)
-            except Exception:
+            except Exception as e:
+                print(e)
                 await message.answer("Не получилось получить вопросы. Попробуй позже.")
                 return
 
@@ -80,7 +102,12 @@ async def topic_or_unexpected_text(message: Message) -> None:
             except TelegramBadRequest:
                 pass
             question_message = await message.answer(
-                format_question(1, topic_result.total_questions, topic_result.first_question.question_text),
+                format_question(
+                    1,
+                    topic_result.total_questions,
+                    topic_result.first_question.question_text,
+                    topic_result.first_question.options_json,
+                ),
                 reply_markup=question_keyboard(
                     topic_result.first_question.assessment_id,
                     topic_result.first_question,
@@ -103,6 +130,8 @@ async def topic_or_unexpected_text(message: Message) -> None:
 
 @router.callback_query(AnswerCallback.filter())
 async def answer_question(callback: CallbackQuery, callback_data: AnswerCallback) -> None:
+    await safe_callback_answer(callback)
+
     async with async_session_factory() as session:
         service = AssessmentService(session, get_neural_api_service())
         try:
@@ -114,11 +143,10 @@ async def answer_question(callback: CallbackQuery, callback_data: AnswerCallback
             )
         except Exception:
             await callback.message.answer("Не получилось обработать ответы. Попробуй позже.")
-            await callback.answer()
             return
 
     if result.already_processed:
-        await callback.answer("Этот вопрос уже обработан.", show_alert=True)
+        await callback.message.answer("Этот вопрос уже обработан.")
         return
 
     async with async_session_factory() as session:
@@ -139,11 +167,11 @@ async def answer_question(callback: CallbackQuery, callback_data: AnswerCallback
                 result.next_question.question_order + 1,
                 result.total_questions,
                 result.next_question.question_text,
+                result.next_question.options_json,
             ),
             reply_markup=question_keyboard(result.assessment.id, result.next_question),
         )
         await remember_message(result.assessment.id, next_message)
-        await callback.answer()
         return
 
     if result.assessment_result and result.assessment:
@@ -157,14 +185,22 @@ async def answer_question(callback: CallbackQuery, callback_data: AnswerCallback
             reply_markup=confirmation_keyboard(result.assessment.id),
         )
         await remember_message(result.assessment.id, result_message)
-        await callback.answer()
         return
 
-    await callback.answer("Этот вопрос уже обработан.", show_alert=True)
+    await callback.message.answer("Этот вопрос уже обработан.")
 
 
 @router.callback_query(ConfirmAssessmentCallback.filter())
 async def confirm_assessment(callback: CallbackQuery, callback_data: ConfirmAssessmentCallback) -> None:
+    await safe_callback_answer(callback)
+
+    loading_message = None
+    if callback_data.accepted and callback.message is not None:
+        loading_message = await show_loading(
+            callback.message,
+            "Готовлю роадмап. Это может занять несколько секунд...",
+        )
+
     async with async_session_factory() as session:
         service = AssessmentService(session, get_neural_api_service())
         assessment = await service.confirm_result(
@@ -174,11 +210,16 @@ async def confirm_assessment(callback: CallbackQuery, callback_data: ConfirmAsse
         )
         roadmap = None
         if assessment is not None and callback_data.accepted:
-            roadmap = await service.generate_roadmap_for_assessment(callback.from_user.id, assessment)
+            try:
+                roadmap = await service.generate_roadmap_for_assessment(callback.from_user.id, assessment)
+            except Exception:
+                roadmap = None
         cleanup_ids = await service.pop_bot_messages(callback_data.assessment_id)
 
+    await safe_delete_message(loading_message)
+
     if assessment is None:
-        await callback.answer("Этот результат уже обработан.", show_alert=True)
+        await callback.message.answer("Этот результат уже обработан.")
         return
 
     if callback_data.accepted:
@@ -189,6 +230,18 @@ async def confirm_assessment(callback: CallbackQuery, callback_data: ConfirmAsse
             current_message=callback.message,
             transition_text="Уровень сохранён",
         )
+        if roadmap is None:
+            error_message = await callback.message.answer(
+                "Уровень сохранён, но не получилось получить роадмап от нейронки. Попробуй позже.",
+            )
+            await remember_message(assessment.id, error_message)
+            await ensure_persistent_menu(
+                callback.bot,
+                callback.message.chat.id,
+                callback.from_user,
+                refresh_reply_keyboard=True,
+            )
+            return
         roadmap_message = await callback.message.answer(
             format_roadmap(roadmap),
             reply_markup=roadmap_confirmation_keyboard(roadmap.id),
@@ -207,11 +260,19 @@ async def confirm_assessment(callback: CallbackQuery, callback_data: ConfirmAsse
             reply_markup=manual_level_keyboard(assessment.id),
         )
         await remember_message(assessment.id, manual_message)
-    await callback.answer()
 
 
 @router.callback_query(ManualLevelCallback.filter())
 async def select_manual_level(callback: CallbackQuery, callback_data: ManualLevelCallback) -> None:
+    await safe_callback_answer(callback)
+
+    loading_message = None
+    if callback.message is not None:
+        loading_message = await show_loading(
+            callback.message,
+            "Готовлю роадмап под выбранный уровень...",
+        )
+
     async with async_session_factory() as session:
         service = AssessmentService(session, get_neural_api_service())
         assessment = await service.select_manual_level(
@@ -221,11 +282,16 @@ async def select_manual_level(callback: CallbackQuery, callback_data: ManualLeve
         )
         roadmap = None
         if assessment is not None:
-            roadmap = await service.generate_roadmap_for_assessment(callback.from_user.id, assessment)
+            try:
+                roadmap = await service.generate_roadmap_for_assessment(callback.from_user.id, assessment)
+            except Exception:
+                roadmap = None
         cleanup_ids = await service.pop_bot_messages(callback_data.assessment_id)
 
+    await safe_delete_message(loading_message)
+
     if assessment is None:
-        await callback.answer("Этот выбор уже обработан.", show_alert=True)
+        await callback.message.answer("Этот выбор уже обработан.")
         return
 
     await cleanup_bot_messages(
@@ -235,16 +301,29 @@ async def select_manual_level(callback: CallbackQuery, callback_data: ManualLeve
         current_message=callback.message,
         transition_text="Уровень сохранён",
     )
+    if roadmap is None:
+        error_message = await callback.message.answer(
+            "Уровень сохранён, но не получилось получить роадмап от нейронки. Попробуй позже.",
+        )
+        await remember_message(assessment.id, error_message)
+        await ensure_persistent_menu(
+            callback.bot,
+            callback.message.chat.id,
+            callback.from_user,
+            refresh_reply_keyboard=True,
+        )
+        return
     roadmap_message = await callback.message.answer(
         format_roadmap(roadmap),
         reply_markup=roadmap_confirmation_keyboard(roadmap.id),
     )
     await remember_roadmap_message(roadmap.id, roadmap_message)
-    await callback.answer()
 
 
 @router.callback_query(RoadmapConfirmCallback.filter())
 async def confirm_roadmap(callback: CallbackQuery, callback_data: RoadmapConfirmCallback) -> None:
+    await safe_callback_answer(callback)
+
     if callback.from_user is None or callback.message is None:
         return
 
@@ -267,13 +346,17 @@ async def confirm_roadmap(callback: CallbackQuery, callback_data: RoadmapConfirm
         )
 
         await remember_roadmap_message(callback_data.roadmap_id, reason_message)
-        await callback.answer()
         return
 
     async with async_session_factory() as session:
         service = AssessmentService(session, get_neural_api_service())
 
         cleanup_ids = await service.pop_bot_messages_for_roadmap(callback_data.roadmap_id)
+
+        loading_message = await show_loading(
+            callback.message,
+            "Сохраняю роадмап и добавляю курс...",
+        )
 
         roadmap = await service.accept_roadmap(
             telegram_user_dto(callback.from_user),
@@ -284,8 +367,10 @@ async def confirm_roadmap(callback: CallbackQuery, callback_data: RoadmapConfirm
             telegram_user_dto(callback.from_user),
         )
 
+    await safe_delete_message(loading_message)
+
     if roadmap is None:
-        await callback.answer("Этот роадмап уже недоступен.", show_alert=True)
+        await callback.message.answer("Этот роадмап уже недоступен.")
         return
 
     course_buttons = CourseService().get_courses_from_user_courses(courses)
@@ -304,9 +389,11 @@ async def confirm_roadmap(callback: CallbackQuery, callback_data: RoadmapConfirm
         reply_markup=courses_webapp_keyboard(course_buttons, page=0),
     )
 
-    menu_message = await callback.message.answer(
-        "Главное меню обновлено.",
-        reply_markup=main_menu_keyboard(has_courses=True),
+    await ensure_persistent_menu(
+        callback.bot,
+        callback.message.chat.id,
+        callback.from_user,
+        refresh_reply_keyboard=True,
     )
 
     async with async_session_factory() as session:
@@ -315,12 +402,6 @@ async def confirm_roadmap(callback: CallbackQuery, callback_data: RoadmapConfirm
             callback_data.roadmap_id,
             courses_message.message_id,
         )
-        await service.remember_bot_message_for_roadmap(
-            callback_data.roadmap_id,
-            menu_message.message_id,
-        )
-
-    await callback.answer()
 
 
 @router.callback_query(CoursesPageCallback.filter())
@@ -328,6 +409,8 @@ async def courses_page(
     callback: CallbackQuery,
     callback_data: CoursesPageCallback,
 ) -> None:
+    await safe_callback_answer(callback)
+
     if callback.from_user is None or callback.message is None:
         return
 
@@ -344,25 +427,37 @@ async def courses_page(
         reply_markup=courses_webapp_keyboard(courses, page=callback_data.page),
     )
 
-    await callback.answer()
-
 
 @router.callback_query(RoadmapRejectReasonCallback.filter())
 async def reject_roadmap_reason(callback: CallbackQuery, callback_data: RoadmapRejectReasonCallback) -> None:
+    await safe_callback_answer(callback)
+
     if callback.from_user is None:
         return
+
+    loading_message = None
+    if callback.message is not None:
+        loading_message = await show_loading(
+            callback.message,
+            "Учитываю причину отказа и подбираю новый роадмап...",
+        )
 
     async with async_session_factory() as session:
         service = AssessmentService(session, get_neural_api_service())
         cleanup_ids = await service.pop_bot_messages_for_roadmap(callback_data.roadmap_id)
-        roadmap = await service.reject_and_regenerate_roadmap(
-            telegram_user_id=callback.from_user.id,
-            roadmap_id=callback_data.roadmap_id,
-            reason=callback_data.reason,
-        )
+        try:
+            roadmap = await service.reject_and_regenerate_roadmap(
+                telegram_user_id=callback.from_user.id,
+                roadmap_id=callback_data.roadmap_id,
+                reason=callback_data.reason,
+            )
+        except Exception:
+            roadmap = None
+
+    await safe_delete_message(loading_message)
 
     if roadmap is None:
-        await callback.answer("Этот роадмап уже недоступен.", show_alert=True)
+        await callback.message.answer("Не получилось получить новый роадмап от нейронки. Попробуй позже.")
         return
 
     await cleanup_bot_messages(
@@ -377,4 +472,3 @@ async def reject_roadmap_reason(callback: CallbackQuery, callback_data: RoadmapR
         reply_markup=roadmap_confirmation_keyboard(roadmap.id),
     )
     await remember_roadmap_message(roadmap.id, roadmap_message)
-    await callback.answer()

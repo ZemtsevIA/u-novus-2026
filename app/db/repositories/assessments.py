@@ -73,8 +73,9 @@ class AssessmentRepository:
             AssessmentQuestion(
                 assessment_id=assessment.id,
                 question_order=index,
+                external_question_id=question.id,
                 question_text=question.text,
-                options_json=question.options,
+                options_json=[option.model_dump() for option in question.options],
             )
             for index, question in enumerate(questions)
         ]
@@ -84,11 +85,11 @@ class AssessmentRepository:
         await self.session.flush()
         return created
 
-    async def save_answer(self, question: AssessmentQuestion, answer: str) -> None:
+    async def save_answer(self, question: AssessmentQuestion, answer: str, answer_value: str | None = None) -> None:
         question.answer_text = answer
+        question.answer_value = answer_value or answer
         await self.session.flush()
 
     async def update_assessment(self, assessment: Assessment) -> None:
         self.session.add(assessment)
         await self.session.flush()
-

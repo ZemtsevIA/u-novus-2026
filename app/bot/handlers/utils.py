@@ -15,8 +15,30 @@ def telegram_user_dto(user: AiogramUser) -> TelegramUserDTO:
     )
 
 
-def format_question(position: int, total: int, text: str) -> str:
-    return f"Вопрос {position} из {total}\n\n{text}"
+def format_question(
+    position: int,
+    total: int,
+    text: str,
+    options: list | None = None,
+) -> str:
+    message = f"Вопрос {position} из {total}\n\n{text}"
+
+    if options:
+        letters = ["A", "B", "C", "D", "E", "F", "G", "H"]
+
+        message += "\n\nВарианты ответа:"
+
+        for index, option in enumerate(options):
+            letter = letters[index] if index < len(letters) else str(index + 1)
+
+            if isinstance(option, dict):
+                option_text = option.get("label") or option.get("value") or ""
+            else:
+                option_text = str(option)
+
+            message += f"\n\n{letter}. {option_text}"
+
+    return message
 
 
 def format_result(

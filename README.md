@@ -86,22 +86,60 @@ RUN_POLLING=true
 - `analyze_answers`
 - `send_user_confirmation`
 - `generate_roadmap`
+- `correct_roadmap`
 - `send_roadmap_feedback`
 
-Пока `USE_MOCK_NEURAL_API=true`, используется `MockNeuralApiService`. Чтобы подключить реальный API, установите `USE_MOCK_NEURAL_API=false`, задайте `NEURAL_API_BASE_URL` и `NEURAL_API_TOKEN`. HTTP-реализация уже использует `httpx` и endpoints:
+Пока `USE_MOCK_NEURAL_API=true`, используется `MockNeuralApiService`. Чтобы подключить реальный API, установите:
 
-- `POST /generate_questions`
+```env
+NEURAL_API_BASE_URL=http://157.22.176.60:8000
+NEURAL_API_SSL_VERIFY=false
+NEURAL_SURVEY_API_ENABLED=true
+NEURAL_SURVEY_USE_LLM=false
+NEURAL_ASSESSMENT_API_ENABLED=false
+NEURAL_API_ERROR_LOG_PATH=logs/neural_api_errors.log
+USE_MOCK_NEURAL_API=false
+```
+
+HTTP-реализация использует `httpx`. Roadmap-ручки взяты из [README_neuro.md](README_neuro.md):
+
+- `POST /api/survey/questions`
+- `POST /api/survey/submit`
 - `POST /analyze_answers`
 - `POST /confirm_assessment`
-- `POST /generate_roadmap`
-- `POST /roadmap_feedback`
+- `POST /api/roadmap/remote-rag`
+- `POST /api/roadmap/correct`
+
+Вопросы анкеты берутся из `/api/survey/questions`, если `NEURAL_SURVEY_API_ENABLED=true`. Флаг `NEURAL_SURVEY_USE_LLM=false` передаётся в API как `"use_llm": false`, чтобы ручка работала быстро и без YandexGPT-ключей.
+
+Характеристика пользователя берётся из `/api/survey/submit`: бот отправляет ответы по `id` вопроса и получает `profile + search_params`. `profile` показывается пользователю как результат анкеты, а `search_params` сохраняется в оценку и затем используется при запросе роадмапа.
+
+Подтверждение уровня пока остаётся fallback при `NEURAL_ASSESSMENT_API_ENABLED=false`. Когда на neural API появится ручка `/confirm_assessment`, включите `NEURAL_ASSESSMENT_API_ENABLED=true`.
+
+Ошибки связи с neural API пишутся отдельно в `logs/neural_api_errors.log`. В Docker папка `./logs` примонтирована в контейнер, поэтому файл доступен на хосте без `docker logs`.
 
 Контракт по данным:
 
-- `POST /generate_questions` получает тему пользователя:
+- `POST /api/survey/questions` получает тему пользователя:
 
 ```json
-{"topic": "Python backend"}
+{
+  "topic": "Python backend",
+  "use_llm": false
+}
+```
+
+- `POST /api/survey/submit` получает ответы анкеты:
+
+```json
+{
+  "topic": "Python backend",
+  "answers": {
+    "current_level": "новичок",
+    "time_per_week": "4–6 часов"
+  },
+  "use_llm": false
+}
 ```
 
 - `POST /analyze_answers` получает тему и выбранные ответы вместе с текстами вопросов:
@@ -119,31 +157,36 @@ RUN_POLLING=true
 }
 ```
 
-- `POST /generate_roadmap` получает тему, уровень и, если пользователь отказался от предыдущего roadmap, причину отказа:
+- `POST /api/roadmap/remote-rag` получает тему, предпочтения, уровень и лимит:
 
 ```json
 {
-  "telegram_user_id": 123456789,
   "topic": "Python backend",
-  "level": "beginner",
-  "rejection_reason": "too_hard"
+  "preferences": "Пользователь хочет изучить: Python backend",
+  "level": "новичок",
+  "limit": 40,
+  "refine_with_llm": true
 }
 ```
 
-- `POST /roadmap_feedback` получает согласие или отказ по конкретному roadmap:
+- `POST /api/roadmap/correct` получает текущий roadmap, прежние `courses[]` и причину отказа:
 
 ```json
 {
-  "telegram_user_id": 123456789,
-  "topic": "Python backend",
-  "level": "beginner",
-  "roadmap": {
-    "id": 1,
-    "title": "Маршрут от нуля до Junior Python Backend Developer",
-    "items": []
+  "profile": {
+    "goal": "Python backend",
+    "domain": "IT",
+    "level": "новичок",
+    "time_per_week": "5-7 часов",
+    "format_pref": "любой",
+    "career_goal": null
   },
-  "accepted": false,
-  "rejection_reason": "wrong_format"
+  "current_roadmap": {
+    "summary": "Маршрут от нуля до Junior Python Backend Developer",
+    "steps": []
+  },
+  "feedback": "wrong_format",
+  "courses": []
 }
 ```
 

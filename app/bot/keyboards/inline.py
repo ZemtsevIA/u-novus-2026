@@ -55,16 +55,22 @@ def start_assessment_keyboard() -> InlineKeyboardMarkup:
 
 def question_keyboard(assessment_id: int, question: AssessmentQuestion) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+
+    letters = ["A", "B", "C", "D", "E", "F", "G", "H"]
+
     for index, option in enumerate(question.options_json):
+        letter = letters[index] if index < len(letters) else str(index + 1)
+
         builder.button(
-            text=option,
+            text=f"Ответ {letter}",
             callback_data=AnswerCallback(
                 assessment_id=assessment_id,
                 question_id=question.id,
                 option_index=index,
             ),
         )
-    builder.adjust(3)
+
+    builder.adjust(2)
     return builder.as_markup()
 
 
@@ -132,7 +138,7 @@ def courses_webapp_keyboard(
             [
                 InlineKeyboardButton(
                     text=short_button_text(course.title),
-                    web_app=WebAppInfo(url=course.url),
+                    web_app=WebAppInfo(url=f"{settings.mini_app_url}/course?course_id={course.id}"),
                 )
             ]
         )

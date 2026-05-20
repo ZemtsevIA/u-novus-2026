@@ -41,7 +41,7 @@ def log_polling_result(task: asyncio.Task) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global handlers_registered
-    setup_logging(settings.debug)
+    setup_logging(settings.debug, settings.neural_api_error_log_path)
     if not handlers_registered:
         register_handlers(dp)
         handlers_registered = True

@@ -23,6 +23,7 @@ class RoadmapRepository:
             level=level,
             title=roadmap.title,
             items_json=[item.model_dump() for item in roadmap.items],
+            courses_json=[course.model_dump() for course in roadmap.courses],
             status=RoadmapStatus.GENERATED,
         )
         self.session.add(entity)

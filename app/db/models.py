@@ -34,6 +34,7 @@ class User(Base):
     username: Mapped[str | None] = mapped_column(String(255), nullable=True)
     first_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    welcome_message_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -62,6 +63,8 @@ class Assessment(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     skills: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
     missing_skills: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    profile_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    search_params_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     bot_message_ids: Mapped[list[int]] = mapped_column(JSONB, default=list, nullable=False)
     accepted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     manual_level_selected: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -84,9 +87,11 @@ class AssessmentQuestion(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     assessment_id: Mapped[int] = mapped_column(ForeignKey("assessments.id", ondelete="CASCADE"), index=True)
     question_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    external_question_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     question_text: Mapped[str] = mapped_column(Text, nullable=False)
-    options_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    options_json: Mapped[list[dict]] = mapped_column(JSONB, nullable=False)
     answer_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    answer_value: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -102,6 +107,7 @@ class Roadmap(Base):
     level: Mapped[str] = mapped_column(String(50), nullable=False)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     items_json: Mapped[list[dict]] = mapped_column(JSONB, nullable=False)
+    courses_json: Mapped[list[dict]] = mapped_column(JSONB, default=list, nullable=False)
     status: Mapped[RoadmapStatus] = mapped_column(
         Enum(
             RoadmapStatus,

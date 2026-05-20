@@ -42,6 +42,10 @@ class AssessmentService:
         await self.session.commit()
         return user
 
+    async def set_welcome_message_id(self, user: User, message_id: int) -> None:
+        await self.users.set_welcome_message_id(user, message_id)
+        await self.session.commit()
+
     async def user_has_completed_assessment(self, user: User) -> bool:
         return await self.assessments.get_latest_completed_for_user(user.id) is not None
 
@@ -130,11 +134,18 @@ class AssessmentService:
             return AnswerResult(already_processed=True)
 
         try:
-            answer = question.options_json[option_index]
+            option = question.options_json[option_index]
         except IndexError:
             return AnswerResult(already_processed=True)
 
-        await self.assessments.save_answer(question, answer)
+        if isinstance(option, dict):
+            answer = str(option.get("label") or option.get("value") or "")
+            answer_value = str(option.get("value") or answer)
+        else:
+            answer = str(option)
+            answer_value = answer
+
+        await self.assessments.save_answer(question, answer, answer_value)
         assessment.current_question_index += 1
 
         if assessment.current_question_index < len(questions):
@@ -147,7 +158,12 @@ class AssessmentService:
             )
 
         answers = [
-            AnswerDTO(question=item.question_text, answer=item.answer_text or "")
+            AnswerDTO(
+                question_id=item.external_question_id,
+                question=item.question_text,
+                answer=item.answer_text or "",
+                value=item.answer_value or item.answer_text or "",
+            )
             for item in questions
         ]
         result = await self.neural_api.analyze_answers(
@@ -160,6 +176,8 @@ class AssessmentService:
         assessment.description = result.description
         assessment.skills = result.skills
         assessment.missing_skills = result.missing_skills
+        assessment.profile_json = result.profile
+        assessment.search_params_json = result.search_params
         assessment.status = AssessmentStatus.WAITING_CONFIRMATION
         await self.assessments.update_assessment(assessment)
         await self.session.commit()
@@ -205,8 +223,9 @@ class AssessmentService:
     ):
         roadmap_dto = await self.neural_api.generate_roadmap(
             telegram_user_id=telegram_user_id,
-            topic=assessment.topic or "",
-            level=assessment.level or "beginner",
+            topic=(assessment.search_params_json or {}).get("topic") or assessment.topic or "",
+            level=(assessment.search_params_json or {}).get("level") or assessment.level or "beginner",
+            preferences=(assessment.search_params_json or {}).get("preferences"),
             rejection_reason=rejection_reason,
         )
         roadmap = await self.roadmaps.create(
@@ -300,11 +319,17 @@ class AssessmentService:
             accepted=False,
             rejection_reason=reason,
         )
-        roadmap_dto = await self.neural_api.generate_roadmap(
+        current_roadmap = {
+            "summary": roadmap.title,
+            "steps": roadmap.items_json,
+        }
+        roadmap_dto = await self.neural_api.correct_roadmap(
             telegram_user_id=telegram_user_id,
             topic=assessment.topic or roadmap.topic,
             level=assessment.level or roadmap.level,
-            rejection_reason=reason,
+            current_roadmap=current_roadmap,
+            courses=roadmap.courses_json or [],
+            feedback=reason,
         )
         new_roadmap = await self.roadmaps.create(
             assessment_id=assessment.id,

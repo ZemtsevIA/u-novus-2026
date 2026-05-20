@@ -27,3 +27,6 @@ class UserRepository:
         await self.session.flush()
         return user
 
+    async def set_welcome_message_id(self, user: User, message_id: int) -> None:
+        user.welcome_message_id = message_id
+        await self.session.flush()
