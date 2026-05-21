@@ -2,7 +2,7 @@
   <div class="timeline-item" :class="alignmentClass">
     <div class="card" :class="side">
       <div class="step-number">Шаг {{ course.step }}</div>
-      
+
       <div class="icon">
         {{ getIconForCourse(course.title) }}
       </div>
@@ -11,14 +11,14 @@
         <div class="header-with-completion">
           <h3>{{ course.title }}</h3>
         </div>
-        
+
         <p class="description">{{ course.course_title || course.title }}</p>
-        
+
         <div class="meta">
           <span class="badge" v-if="course.format">📚 {{ course.format }}</span>
           <span class="badge" v-if="course.duration_hours">⏱️ {{ course.duration_hours }} часов</span>
         </div>
-        
+
         <div class="skills" v-if="course.skills && course.skills.length">
           <strong>Навыки:</strong>
           <div class="skill-list">
@@ -30,27 +30,27 @@
             </span>
           </div>
         </div>
-        
+
         <p class="why" v-if="course.why">
           <strong>Почему это важно:</strong> {{ course.why }}
         </p>
-        
+
         <p class="career-boost" v-if="course.career_boost">
           🎯 {{ course.career_boost }}
         </p>
-        
-        <a 
-          v-if="course.course_url" 
-          :href="course.course_url" 
-          target="_blank" 
+
+        <a
+          v-if="course.course_url"
+          :href="course.course_url"
+          target="_blank"
           class="course-link"
         >
           Перейти к курсу →
         </a>
       </div>
-      
-      <button 
-        @click="toggleComplete" 
+
+      <button
+        @click="toggleComplete"
         class="complete-btn"
         :class="{ completed: isCompleted }"
         :disabled="completionLoading"
@@ -122,7 +122,7 @@ let notificationTimeout = null
 const showNotification = (type, title, message, pointsEarned = 0) => {
   // Очищаем предыдущий таймаут
   if (notificationTimeout) clearTimeout(notificationTimeout)
-  
+
   notification.value = {
     visible: true,
     type,
@@ -130,7 +130,7 @@ const showNotification = (type, title, message, pointsEarned = 0) => {
     message,
     pointsEarned
   }
-  
+
   // Автоматически скрываем через 4 секунды
   notificationTimeout = setTimeout(() => {
     closeNotification()
@@ -154,9 +154,9 @@ const alignmentClass = computed(() => {
 // Функция для выбора иконки на основе названия курса
 const getIconForCourse = (title) => {
   if (!title) return '🚀'
-  
+
   const hash = getStringHash(title)
-  
+
   const neutralIcons = [
     '📚', '📖', '🎓', '💻', '⌨️', '🖥️', '💾', '📀', '💿', '🔧',
     '⚙️', '🔨', '🛠️', '🎯', '💡', '⭐', '🌟', '✨', '⚡', '🔥',
@@ -165,7 +165,7 @@ const getIconForCourse = (title) => {
     '🔐', '🛡️', '🌐', '☁️', '💨', '🌈', '🌍', '🌎', '🌏', '📱',
     '📲', '🤳', '🖱️', '🖨️', '📟', '☎️', '📞', '✉️', '📧', '💬'
   ]
-  
+
   const index = Math.abs(hash) % neutralIcons.length
   return neutralIcons[index]
 }
@@ -184,37 +184,37 @@ const getStringHash = (str) => {
 const getPointsForCourse = () => {
   // Базовая стоимость курса
   let points = 100
-  
+
   // Бонус за продолжительность (до +100)
   if (props.course.duration_hours) {
     points += Math.min(props.course.duration_hours, 100)
   }
-  
+
   // Бонус за количество навыков (до +50)
   if (props.course.skills?.length) {
     points += Math.min(props.course.skills.length * 5, 50)
   }
-  
+
   // Бонус за формат (практика даёт больше)
   if (props.course.format?.toLowerCase().includes('практик')) {
     points += 30
   }
-  
+
   return points
 }
 
 // Основная функция отметки/снятия отметки о прохождении курса
 const toggleComplete = async () => {
   if (completionLoading.value) return
-  
+
   completionLoading.value = true
-  
+
   const newStatus = !isCompleted.value
   const pointsEarned = getPointsForCourse()
-  
+
   try {
     const endpoint = newStatus ? '/api/courses/complete' : '/api/courses/uncomplete'
-    
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -230,15 +230,15 @@ const toggleComplete = async () => {
         completed_at: new Date().toISOString()
       })
     })
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
     }
-    
+
     const result = await response.json()
     isCompleted.value = newStatus
-    
+
     // Показываем красивое уведомление
     if (newStatus) {
       // Поздравление с прохождением курса
@@ -250,14 +250,14 @@ const toggleComplete = async () => {
         `🚀 Вы на шаг ближе к карьере мечты! "${props.course.title}" пройден!`
       ]
       const randomMessage = congratulationsMessages[Math.floor(Math.random() * congratulationsMessages.length)]
-      
+
       showNotification(
         'points',
         '🎉 Курс пройден! 🎉',
         randomMessage,
         pointsEarned
       )
-      
+
       emit('course-completed', {
         courseId: props.course.course_id || props.course.id,
         step: props.course.step,
@@ -271,24 +271,24 @@ const toggleComplete = async () => {
         `Вы сняли отметку с курса "${props.course.title}". Баллы будут списаны.`,
         0
       )
-      
+
       emit('course-uncompleted', {
         courseId: props.course.course_id || props.course.id,
         step: props.course.step,
         points: -pointsEarned
       })
     }
-    
+
     // Эмитим событие об обновлении баллов для родителя
     emit('points-updated', {
       userId: props.userId,
       change: newStatus ? pointsEarned : -pointsEarned,
       total: result.total_points || 0
     })
-    
+
   } catch (err) {
     console.error('Ошибка при сохранении прогресса:', err)
-    
+
     // Показываем уведомление об ошибке
     showNotification(
       'error',
@@ -322,10 +322,10 @@ watch(() => props.course.completed, (newVal) => {
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   transform: translateY(0);
-  transition: 
+  transition:
     transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 
+  box-shadow:
     0 10px 30px -10px rgba(0, 0, 0, 0.5),
     0 0 15px rgba(255, 255, 255, 0.05);
 }
@@ -356,7 +356,7 @@ watch(() => props.course.completed, (newVal) => {
     rgba(255, 5, 214, 0.25) 19.67%,
     rgba(255, 2, 125, 0.22) 86.89%
   ), rgba(28, 18, 55, 0.88);
-  box-shadow: 
+  box-shadow:
     0 0 40px rgba(255, 5, 214, 0.5),
     0 0 70px rgba(255, 2, 125, 0.35),
     0 15px 45px rgba(0, 0, 0, 0.5);
@@ -373,7 +373,7 @@ watch(() => props.course.completed, (newVal) => {
     rgba(46, 194, 246, 0.22) 28.97%,
     rgba(42, 244, 255, 0.18) 81.83%
   ), rgba(28, 18, 55, 0.88);
-  box-shadow: 
+  box-shadow:
     0 0 40px rgba(46, 194, 246, 0.5),
     0 0 70px rgba(42, 244, 255, 0.35),
     0 15px 45px rgba(0, 0, 0, 0.5);
@@ -668,16 +668,16 @@ watch(() => props.course.completed, (newVal) => {
   .header-with-completion {
     flex-direction: column;
   }
-  
+
   .complete-btn {
     width: 100%;
     min-width: auto;
   }
-  
+
   .header-with-completion h3 {
     font-size: 1.3rem;
   }
-  
+
   .custom-notification {
     bottom: 20px;
     right: 20px;

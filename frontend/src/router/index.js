@@ -11,6 +11,10 @@ const routes = [
     component: HomePage
   },
   {
+    path: '/course',
+    component: HomePage
+  },
+  {
     path: '/profile',
     component: ProfilePage
   },
@@ -21,6 +25,10 @@ const routes = [
   {
     path: '/Shop',
     component: ShopPage
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    component: HomePage
   }
 ]
 

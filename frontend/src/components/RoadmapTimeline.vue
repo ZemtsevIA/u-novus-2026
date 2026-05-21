@@ -2,17 +2,17 @@
   <div class="text">
     <h1>Маршрут обучения: {{ topicName }}</h1>
   </div>
-  
+
   <div v-if="loading" class="loading">
     <div class="spinner"></div>
     <p>Загрузка маршрута...</p>
   </div>
-  
+
   <div v-else-if="error" class="error">
     <p>❌ {{ error }}</p>
     <button @click="fetchRoadmapData" class="retry-btn">Попробовать снова</button>
   </div>
-  
+
   <section v-else class="roadmap">
     <div class="summary">
       <p>{{ roadmapData?.roadmap?.summary }}</p>
@@ -33,7 +33,7 @@
         🎉 Маршрут пройден! 🎉
       </div>
     </div>
-    
+
     <CourseCard
       v-for="(step, index) in roadmapData?.roadmap?.steps || []"
       :key="step.step || step.course_id || index"
@@ -44,7 +44,7 @@
       @course-completed="handleCourseCompleted"
       @course-uncompleted="handleCourseUncompleted"
     />
-    
+
     <div v-if="roadmapData?.roadmap?.career_opportunities?.length" class="career">
       <h3>Возможности после прохождения:</h3>
       <div class="career-list">
@@ -53,30 +53,30 @@
         </span>
       </div>
     </div>
-    
+
     <!-- Блок с вакансиями/стажировками - показывается при 100% прогрессе -->
     <div v-if="isRoadmapCompleted" class="opportunities-section">
       <div class="section-header">
         <h2>🎯 Актуальные возможности</h2>
         <p>Подобраны специально для вас на основе пройденного маршрута</p>
       </div>
-      
+
       <!-- Загрузка -->
       <div v-if="loadingVacancies" class="loading-opportunities">
         <div class="spinner-small"></div>
         <p>Поиск актуальных вакансий и стажировок...</p>
       </div>
-      
+
       <!-- Ошибка -->
       <div v-else-if="vacanciesError" class="error-opportunities">
         <p>⚠️ {{ vacanciesError }}</p>
         <button @click="fetchVacancies" class="retry-small-btn">Повторить поиск</button>
       </div>
-      
+
       <!-- Вакансии -->
       <div v-else-if="vacanciesData?.results?.length" class="opportunities-list">
-        <div 
-          v-for="(item, idx) in vacanciesData.results" 
+        <div
+          v-for="(item, idx) in vacanciesData.results"
           :key="idx"
           class="opportunity-card"
           :class="'type-' + (item.vacancy_data.type || 'default')"
@@ -85,26 +85,26 @@
             <span class="badge-type">{{ getTypeLabel(item.vacancy_data.type) }}</span>
             <span class="badge-match">Совпадение: {{ Math.round(item.similarity_score * 100) }}%</span>
           </div>
-          
+
           <h3 class="opportunity-title">{{ item.vacancy_data.title }}</h3>
-          
+
           <div class="opportunity-meta">
             <span class="meta-company">🏢 {{ item.vacancy_data.organization || 'Не указана' }}</span>
             <span v-if="item.vacancy_data.deadline" class="meta-deadline">
               ⏰ {{ formatDeadline(item.vacancy_data.deadline) }}
             </span>
           </div>
-          
+
           <div class="opportunity-tags" v-if="item.vacancy_data.tags?.length">
             <span v-for="tag in item.vacancy_data.tags.slice(0, 5)" :key="tag" class="tag">
               {{ tag }}
             </span>
           </div>
-          
-          <a 
+
+          <a
             v-if="item.vacancy_data.url"
-            :href="item.vacancy_data.url" 
-            target="_blank" 
+            :href="item.vacancy_data.url"
+            target="_blank"
             rel="noopener noreferrer"
             class="opportunity-link"
           >
@@ -113,7 +113,7 @@
           <div v-else class="no-link">Ссылка временно недоступна</div>
         </div>
       </div>
-      
+
       <!-- Нет результатов -->
       <div v-else-if="!loadingVacancies && !vacanciesError" class="no-opportunities">
         <p>😔 На данный момент нет актуальных предложений по вашему профилю</p>
@@ -147,8 +147,8 @@ const completedSteps = ref(new Set())
 
 // Тема роадмапа
 const topicName = computed(() => {
-  return roadmapData.value?.search_request?.topic || 
-         roadmapData.value?.refined_search_request?.topic || 
+  return roadmapData.value?.search_request?.topic ||
+         roadmapData.value?.refined_search_request?.topic ||
          'Python backend'
 })
 
@@ -198,7 +198,7 @@ const formatDeadline = (dateString) => {
     const date = new Date(dateString)
     const now = new Date()
     const diffDays = Math.ceil((date - now) / (1000 * 60 * 60 * 24))
-    
+
     if (diffDays < 0) return 'Дедлайн прошёл'
     if (diffDays === 0) return 'Сегодня последний день!'
     if (diffDays === 1) return 'Остался 1 день'
@@ -211,10 +211,10 @@ const formatDeadline = (dateString) => {
 // Загрузка прогресса
 const loadUserProgress = async () => {
   if (!telegramUserId.value || !currentRoadmapId.value) return
-  
+
   try {
     const response = await fetch(`/api/user/progress?user_id=${telegramUserId.value}&roadmap_id=${currentRoadmapId.value}`)
-    
+
     if (response.ok) {
       const data = await response.json()
       completedSteps.value.clear()
@@ -230,7 +230,7 @@ const loadUserProgress = async () => {
 // Сохранение прогресса
 const saveProgress = async () => {
   if (!telegramUserId.value || !currentRoadmapId.value) return
-  
+
   try {
     await fetch('/api/user/progress', {
       method: 'POST',
@@ -263,54 +263,54 @@ const fetchVacancies = async () => {
     console.warn('Нет ID роадмапа')
     return
   }
-  
+
   loadingVacancies.value = true
   vacanciesError.value = null
-  
+
   try {
     // Шаг 1: Получаем информацию о роадмапе по ID
     const roadmapResponse = await fetch(`/api/roadmaps/${currentRoadmapId.value}`)
-    
+
     if (!roadmapResponse.ok) {
       throw new Error(`Ошибка получения роадмапа: ${roadmapResponse.status}`)
     }
-    
+
     const roadmapInfoData = await roadmapResponse.json()
     roadmapInfo.value = roadmapInfoData
-    
+
     // Извлекаем нужные поля
     const title = roadmapInfoData.title || topicName.value
     const topic = roadmapInfoData.topic || topicName.value
-    const level = roadmapInfoData.level || 
-                  roadmapData.value?.search_request?.level || 
-                  roadmapData.value?.refined_search_request?.level || 
+    const level = roadmapInfoData.level ||
+                  roadmapData.value?.search_request?.level ||
+                  roadmapData.value?.refined_search_request?.level ||
                   'Junior'
-    
+
     // Шаг 2: Формируем поисковый контекст
     const searchContext = `${title} ${topic} уровень ${level}`
-    
+
     console.log('Поиск вакансий по контексту:', searchContext)
-    
+
     // Шаг 3: Запрашиваем вакансии у сервиса Паши
     const vacanciesResponse = await fetch('/api/search_vacancies', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ context: searchContext })
     })
-    
+
     if (!vacanciesResponse.ok) {
       throw new Error(`Ошибка поиска: ${vacanciesResponse.status}`)
     }
-    
+
     const result = await vacanciesResponse.json()
-    
+
     // Фильтруем результаты с низкой релевантностью (ниже 0.3)
     if (result.results && Array.isArray(result.results)) {
       result.results = result.results.filter(item => item.similarity_score > 0.3)
     }
-    
+
     vacanciesData.value = result
-    
+
   } catch (err) {
     console.error('Ошибка получения вакансий:', err)
     vacanciesError.value = err.message || 'Не удалось загрузить актуальные предложения'
@@ -331,37 +331,37 @@ const fetchRoadmapData = async () => {
   try {
     loading.value = true
     error.value = null
-    
+
     const response = await fetch('/api/roadmap', {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     })
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    
+
     const data = await response.json()
     roadmapData.value = data
-    
+
     // Генерируем или используем ID роадмапа
     currentRoadmapId.value = data.roadmap?.id || generateRoadmapId(data)
-    
+
     // Загружаем прогресс пользователя
     if (data.roadmap?.steps && telegramUserId.value) {
       await loadUserProgress()
-      
+
       // Добавляем флаг completed в каждый шаг
       data.roadmap.steps.forEach(step => {
         const courseId = step.course_id || step.id
         step.completed = completedSteps.value.has(courseId)
       })
     }
-    
+
   } catch (err) {
     console.error('Ошибка загрузки данных:', err)
     error.value = err.message || 'Не удалось загрузить маршрут обучения'
-    
+
     // Для разработки - используем mock данные
     if (import.meta.env.DEV) {
       console.warn('Используются mock данные для разработки')
@@ -458,24 +458,24 @@ const updateSearchRequest = async (searchParams) => {
   try {
     loading.value = true
     error.value = null
-    
+
     const response = await fetch('/api/roadmap/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(searchParams)
     })
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    
+
     const data = await response.json()
     roadmapData.value = data
-    
+
     if (telegramUserId.value) {
       await loadUserProgress()
     }
-    
+
   } catch (err) {
     console.error('Ошибка обновления:', err)
     error.value = err.message || 'Не удалось обновить маршрут'
@@ -940,23 +940,23 @@ defineExpose({
     max-width: 90%;
     min-width: 90%;
   }
-  
+
   .text h1 {
     font-size: 1.5rem;
   }
-  
+
   .summary, .career, .progress-section, .opportunities-section {
     padding: 16px 20px;
   }
-  
+
   .section-header h2 {
     font-size: 1.3rem;
   }
-  
+
   .opportunity-title {
     font-size: 1rem;
   }
-  
+
   .card-badge {
     flex-direction: column;
     align-items: flex-start;

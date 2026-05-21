@@ -16,7 +16,15 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 import StarBackground from './components/StarBackground.vue'
+
+onMounted(() => {
+  if (window.Telegram && window.Telegram.WebApp) {
+    window.Telegram.WebApp.ready()
+    window.Telegram.WebApp.expand()
+  }
+})
 </script>
 
 <style>
